@@ -2,11 +2,11 @@ import logging
 import numpy as np
 from tqdm import tqdm
 
-from Utils.tools import setup_logging, batch_generator
+from Utils.tools import setup_logging
 from Utils.metrics import Precision, Recall, Accuracy
 from Utils.tensor import Tensor
 
-def train(model, optimizer, criterion, X_train, y_train, *, epochs=10, batch_size=32, validation_data=None):
+def train(model, optimizer, criterion, train_loader, *, epochs=10, validation_data=None):
     setup_logging()
     precision_metric = Precision()
     recall_metric = Recall()
@@ -19,13 +19,11 @@ def train(model, optimizer, criterion, X_train, y_train, *, epochs=10, batch_siz
     if validation_data:
         val_losses, val_accuracies, val_precisions, val_recalls = [], [], [], []
 
-    num_batches = int(np.ceil(len(X_train) / batch_size))
-
     for epoch in range(epochs):
         epoch_loss = 0.0
         batch_precisions, batch_recalls, batch_accuracies = [], [], []
 
-        progress_bar = tqdm(batch_generator(X_train, y_train, batch_size), desc=f"Epoch {epoch + 1}", total=num_batches)
+        progress_bar = tqdm(train_loader, desc=f"Epoch {epoch + 1}", total=len(train_loader))
 
         for batch_idx, (X_batch, y_batch) in enumerate(progress_bar):
             X_batch = Tensor(X_batch)
@@ -79,7 +77,7 @@ def train(model, optimizer, criterion, X_train, y_train, *, epochs=10, batch_siz
         epoch_precision = np.mean(batch_precisions)
         epoch_recall = np.mean(batch_recalls)
 
-        train_losses.append(epoch_loss / num_batches)
+        train_losses.append(epoch_loss / len(train_loader))
         train_accuracies.append(epoch_accuracy)
         train_precisions.append(epoch_precision)
         train_recalls.append(epoch_recall)
@@ -94,9 +92,8 @@ def train(model, optimizer, criterion, X_train, y_train, *, epochs=10, batch_siz
 
         # Валидация после эпохи
         if validation_data:
-            X_val, y_val = validation_data
             val_loss, val_accuracy, val_precision, val_recall = test(
-                model, criterion, X_val, y_val, batch_size=batch_size, epoch=epoch + 1
+                model, criterion, validation_data, epoch=epoch + 1
             )
 
             val_losses.append(val_loss)
@@ -111,7 +108,7 @@ def train(model, optimizer, criterion, X_train, y_train, *, epochs=10, batch_siz
         return train_losses, train_accuracies, train_precisions, train_recalls
 
 
-def test(model, criterion, X_test, y_test, *, batch_size=32, epoch=None):
+def test(model, criterion, test_loader, *, epoch=None):
     precision_metric = Precision()
     recall_metric = Recall()
     accuracy_metric = Accuracy()
@@ -119,9 +116,8 @@ def test(model, criterion, X_test, y_test, *, batch_size=32, epoch=None):
     test_loss = 0.0
     batch_precisions, batch_recalls, batch_accuracies = [], [], []
 
-    num_batches = int(np.ceil(len(X_test) / batch_size))
     desc = f"Validation Epoch {epoch}" if epoch else "Testing"
-    progress_bar = tqdm(batch_generator(X_test, y_test, batch_size), desc=desc, total=num_batches)
+    progress_bar = tqdm(test_loader, desc=desc, total=len(test_loader))
 
     for X_batch, y_batch in progress_bar:
         X_batch = Tensor(X_batch)
@@ -152,7 +148,7 @@ def test(model, criterion, X_test, y_test, *, batch_size=32, epoch=None):
         })
 
     # Final metrics
-    avg_loss = test_loss / num_batches
+    avg_loss = test_loss / len(test_loader)
     avg_accuracy = np.mean(batch_accuracies)
     avg_precision = np.mean(batch_precisions)
     avg_recall = np.mean(batch_recalls)

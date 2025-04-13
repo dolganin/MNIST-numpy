@@ -1,11 +1,12 @@
 import os
 import pandas as pd
 
-from Utils.tools import yaml_reader, preprocess_data, plot_metrics
+from Utils.tools import yaml_reader, plot_metrics, DataLoader
 from Model.model import MnistClassifier
 from Optimizer.adam import AdamOptimizer
 from Loss.ce import CrossEntropyLoss
 from train import train
+from Augmentations.augs import Compose, RandomHorizontalFlip, RandomRotation, AddGaussianNoise, ToFloat
 
 def main():
     # Читаем конфиг
@@ -31,13 +32,22 @@ def main():
     graphics_dir = config["output_parameters"]["out_graphics_directory"]
     model_dir = config["output_parameters"]["out_model_directory"]
 
-    # Грузим данные
+    # Загружаем данные
     data_train = pd.read_csv(traindir).to_numpy()
     data_test = pd.read_csv(testdir).to_numpy()
 
-    # Препроцессинг
-    X_train, y_train = preprocess_data(data_train)
-    X_test, y_test = preprocess_data(data_test)
+    # Аугментации
+    train_transforms = Compose([
+        ToFloat(),
+        RandomHorizontalFlip(prob=0.5),
+        RandomRotation(angles=[0, 90, 180, 270]),
+        AddGaussianNoise(mean=0.0, std=0.05),
+    ])
+    test_transforms = Compose([ToFloat()])  # На тесте без аугментаций, только float
+
+    # DataLoader'ы
+    train_loader = DataLoader(data_train, batch_size=batch_size, shuffle=True, augmentations=train_transforms)
+    test_loader = DataLoader(data_test, batch_size=batch_size, shuffle=False, augmentations=test_transforms)
 
     # Инициализация модели, оптимизатора и функции потерь
     model = MnistClassifier()
@@ -54,12 +64,10 @@ def main():
     # Тренировка модели + тест
     train_metrics, test_metrics = train(
         model, optimizer, criterion,
-        X_train, y_train,
-        epochs=epochs,
-        batch_size=batch_size,
-        validation_data=(X_test, y_test)  # ✅ правильно
+        train_loader,
+        validation_data=test_loader,
+        epochs=epochs
     )
-
 
     # Сохраняем графики
     plot_metrics(train_metrics, test_metrics, output_dir=graphics_dir)
