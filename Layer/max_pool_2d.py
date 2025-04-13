@@ -1,3 +1,8 @@
+import numpy as np
+
+from Layer.base_layer import Layer
+from Utils.tensor import Tensor
+
 class MaxPool2d(Layer):
     def __init__(self, kernel_size, stride=None):
         self.kernel_size = kernel_size

@@ -1,19 +1,21 @@
 dataset_parameters:
-    testdir: "data/mnist_test.csv"
-    traindir: "data/mnist_train.csv"
+    testdir: "../data/mnist_test.csv"
+    traindir: "../data/mnist_train.csv"
 
 model_parameters:
-    weight_decay: 0.001
+    weight_decay: 0.003
     dropout_rate: 0.1
+    beta1: 0.9
+    beta2: 1.1
+    eps: 1e-8
   
     
 training_parameters:
-  batch_size: 1
-  learning_rate: 0.003
-  num_epochs: 300
+  batch_size: 32
+  learning_rate: 0.009
+  num_epochs: 1
 
 output_parameters:
-    part_of_partitions: 6
     out_model_directory: "model/"
     out_graphics_directory: "graphics/"
     out_inference_directory: "inference/"

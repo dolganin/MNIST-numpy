@@ -1,3 +1,8 @@
+import numpy as np
+
+from Layer.base_layer import Layer
+from Utils.tensor import Tensor
+
 class ReLU(Layer):
     def __init__(self):
         self.last_input = None

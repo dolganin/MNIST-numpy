@@ -1,3 +1,8 @@
+import numpy as np
+
+from Layer.base_layer import Layer
+from Utils.tensor import Tensor
+
 class FC(Layer):
     def __init__(self, in_features, out_features):
         self.weights = Tensor(np.random.randn(in_features, out_features) * 0.1, requires_grad=True)

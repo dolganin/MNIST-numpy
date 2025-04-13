@@ -1,3 +1,8 @@
+import numpy as np
+
+from Layer.base_layer import Layer
+from Utils.tensor import Tensor
+
 class Flatten(Layer):
     def forward(self, x: Tensor) -> Tensor:
         self.input_shape = x.data.shape

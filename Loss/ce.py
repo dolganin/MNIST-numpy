@@ -1,3 +1,6 @@
+from Utils.tensor import Tensor
+import numpy as np
+
 class CrossEntropyLoss:
     def __call__(self, logits: Tensor, target: np.ndarray) -> Tensor:
         self.logits = logits.data
