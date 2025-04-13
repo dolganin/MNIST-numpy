@@ -6,7 +6,7 @@ from Model.model import MnistClassifier
 from Optimizer.adam import AdamOptimizer
 from Loss.ce import CrossEntropyLoss
 from train import train
-from Augmentations.augs import Compose, RandomHorizontalFlip, RandomRotation, AddGaussianNoise, ToFloat
+from Augmentations.augs import Compose, RandomHorizontalFlip, RandomRotation, AddGaussianNoise, ToFloat, Normalize
 
 def main():
     # Читаем конфиг
@@ -39,11 +39,14 @@ def main():
     # Аугментации
     train_transforms = Compose([
         ToFloat(),
+        Normalize(mean=0.1307, std=0.3081),
         RandomHorizontalFlip(prob=0.5),
         RandomRotation(angles=[0, 90, 180, 270]),
         AddGaussianNoise(mean=0.0, std=0.05),
     ])
-    test_transforms = Compose([ToFloat()])  # На тесте без аугментаций, только float
+    test_transforms = Compose([
+    ToFloat(),
+    Normalize(mean=0.1307, std=0.3081)])
 
     # DataLoader'ы
     train_loader = DataLoader(data_train, batch_size=batch_size, shuffle=True, augmentations=train_transforms)
