@@ -12,7 +12,7 @@ class MnistClassifier:
     def __init__(self):
         # Слои модели
         self.layers = [
-            Conv2d(in_channel=1, out_channel=8, kernel_size=(3, 3), stride=1, padding=1),
+            Conv2d(in_channel=1, out_channel=8, kernel_size=(3, 3), stride=1, padding=1, mode='im2col'),
             ReLU(),
             MaxPool2d(kernel_size=(2, 2), stride=2),
             Flatten(),
