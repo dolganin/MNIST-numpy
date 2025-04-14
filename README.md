@@ -79,7 +79,7 @@ chmod +x train.sh
 
 ## Результаты
 
-![][graphics/training_validation_metrics.png]
+![](graphics/training_validation_metrics.png)
 
 
 
