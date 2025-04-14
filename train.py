@@ -6,140 +6,98 @@ from Utils.tools import setup_logging
 from Utils.metrics import Precision, Recall, Accuracy
 from Utils.tensor import Tensor
 
-def train(model, optimizer, criterion, train_loader, *, epochs=10, validation_data=None):
+def train(model, optimizer, criterion, train_loader, *, validation_data=None, epochs=1, validate_every=300):
     setup_logging()
     precision_metric = Precision()
     recall_metric = Recall()
     accuracy_metric = Accuracy()
 
-    # Метрики тренировки
     train_losses, train_accuracies, train_precisions, train_recalls = [], [], [], []
+    val_losses, val_accuracies, val_precisions, val_recalls = [], [], [], []
 
-    # Метрики валидации (если есть)
-    if validation_data:
-        val_losses, val_accuracies, val_precisions, val_recalls = [], [], [], []
+    global_step = 0
 
     for epoch in range(epochs):
-        epoch_loss = 0.0
-        batch_precisions, batch_recalls, batch_accuracies = [], [], []
-
         progress_bar = tqdm(train_loader, desc=f"Epoch {epoch + 1}", total=len(train_loader))
 
         for batch_idx, (X_batch, y_batch) in enumerate(progress_bar):
+            global_step += 1
             X_batch = Tensor(X_batch)
 
-            # Forward pass
             outputs = model(X_batch)
             loss_tensor = criterion(outputs, y_batch)
             batch_loss = loss_tensor.data.item()
-            epoch_loss += batch_loss
 
-            # Predictions
             predictions = np.argmax(outputs.data, axis=1)
 
-            # Метрики
             batch_precision = precision_metric(y_batch, predictions) * 100
             batch_recall = recall_metric(y_batch, predictions) * 100
             batch_accuracy = accuracy_metric(y_batch, predictions) * 100
 
-            batch_precisions.append(batch_precision)
-            batch_recalls.append(batch_recall)
-            batch_accuracies.append(batch_accuracy)
+            train_losses.append(batch_loss)
+            train_accuracies.append(batch_accuracy)
+            train_precisions.append(batch_precision)
+            train_recalls.append(batch_recall)
 
-            # Backward pass
             grad_loss = criterion.backward()
             model.backward(grad_loss)
 
-            # Обновление параметров
             params = model.parameters()
             grads = [p.grad for p in params]
             optimizer.step(grads)
 
-            # Обнуляем градиенты
             for p in params:
                 p.grad = np.zeros_like(p.grad)
 
-            # Progress bar + logging
             progress_bar.set_postfix({
                 "Loss": f"{batch_loss:.4f}",
                 "Accuracy": f"{batch_accuracy:.2f}%",
                 "Precision": f"{batch_precision:.2f}%",
                 "Recall": f"{batch_recall:.2f}%"
             })
-            logging.info(
-                f"Epoch {epoch + 1}, Batch {batch_idx + 1}: "
-                f"Loss = {batch_loss:.4f}, Accuracy = {batch_accuracy:.2f}%, "
-                f"Precision = {batch_precision:.2f}%, Recall = {batch_recall:.2f}%"
-            )
 
-        # Epoch summary
-        epoch_accuracy = np.mean(batch_accuracies)
-        epoch_precision = np.mean(batch_precisions)
-        epoch_recall = np.mean(batch_recalls)
+            # Валидация каждые validate_every батчей
+            if validation_data and global_step % validate_every == 0:
+                val_loss, val_accuracy, val_precision, val_recall = test(
+                    model, criterion, validation_data
+                )
 
-        train_losses.append(epoch_loss / len(train_loader))
-        train_accuracies.append(epoch_accuracy)
-        train_precisions.append(epoch_precision)
-        train_recalls.append(epoch_recall)
+                # Учитываем, что test() возвращает списки по батчам
+                val_losses.extend(val_loss)
+                val_accuracies.extend(val_accuracy)
+                val_precisions.extend(val_precision)
+                val_recalls.extend(val_recall)
 
-        epoch_log_msg = (
-            f"[Train] Epoch {epoch + 1} Summary: "
-            f"Loss = {train_losses[-1]:.4f}, Accuracy = {epoch_accuracy:.2f}%, "
-            f"Precision = {epoch_precision:.2f}%, Recall = {epoch_recall:.2f}%"
-        )
-        print(epoch_log_msg)
-        logging.info(epoch_log_msg)
+    return (train_losses, train_accuracies, train_precisions, train_recalls), \
+           (val_losses, val_accuracies, val_precisions, val_recalls)
 
-        # Валидация после эпохи
-        if validation_data:
-            val_loss, val_accuracy, val_precision, val_recall = test(
-                model, criterion, validation_data, epoch=epoch + 1
-            )
-
-            val_losses.append(val_loss)
-            val_accuracies.append(val_accuracy)
-            val_precisions.append(val_precision)
-            val_recalls.append(val_recall)
-
-    if validation_data:
-        return (train_losses, train_accuracies, train_precisions, train_recalls), \
-               (val_losses, val_accuracies, val_precisions, val_recalls)
-    else:
-        return train_losses, train_accuracies, train_precisions, train_recalls
-
-
-def test(model, criterion, test_loader, *, epoch=None):
+def test(model, criterion, test_loader):
     precision_metric = Precision()
     recall_metric = Recall()
     accuracy_metric = Accuracy()
 
-    test_loss = 0.0
-    batch_precisions, batch_recalls, batch_accuracies = [], [], []
+    batch_losses, batch_precisions, batch_recalls, batch_accuracies = [], [], [], []
 
-    desc = f"Validation Epoch {epoch}" if epoch else "Testing"
-    progress_bar = tqdm(test_loader, desc=desc, total=len(test_loader))
+    progress_bar = tqdm(test_loader, desc="Validation", total=len(test_loader))
 
     for X_batch, y_batch in progress_bar:
         X_batch = Tensor(X_batch)
 
-        # Forward pass
         outputs = model(X_batch)
         loss_tensor = criterion(outputs, y_batch)
         batch_loss = loss_tensor.data.item()
-        test_loss += batch_loss
 
-        # Predictions and metrics
         predictions = np.argmax(outputs.data, axis=1)
 
         batch_precision = precision_metric(y_batch, predictions) * 100
         batch_recall = recall_metric(y_batch, predictions) * 100
         batch_accuracy = accuracy_metric(y_batch, predictions) * 100
 
+        batch_losses.append(batch_loss)
         batch_precisions.append(batch_precision)
         batch_recalls.append(batch_recall)
         batch_accuracies.append(batch_accuracy)
 
-        # Progress bar
         progress_bar.set_postfix({
             "Loss": f"{batch_loss:.4f}",
             "Accuracy": f"{batch_accuracy:.2f}%",
@@ -147,20 +105,6 @@ def test(model, criterion, test_loader, *, epoch=None):
             "Recall": f"{batch_recall:.2f}%"
         })
 
-    # Final metrics
-    avg_loss = test_loss / len(test_loader)
-    avg_accuracy = np.mean(batch_accuracies)
-    avg_precision = np.mean(batch_precisions)
-    avg_recall = np.mean(batch_recalls)
+    return batch_losses, batch_accuracies, batch_precisions, batch_recalls
 
-    summary_msg = (
-        f"[Test] Epoch {epoch if epoch else '-'} Summary: "
-        f"Loss = {avg_loss:.4f}, "
-        f"Accuracy = {avg_accuracy:.2f}%, "
-        f"Precision = {avg_precision:.2f}%, "
-        f"Recall = {avg_recall:.2f}%"
-    )
-    print(summary_msg)
-    logging.info(summary_msg)
 
-    return avg_loss, avg_accuracy, avg_precision, avg_recall

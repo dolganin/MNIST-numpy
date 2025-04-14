@@ -73,10 +73,15 @@ chmod +x train.sh
 ## Нюансы
 После завершения обучения вы получите:
 
-Сохранённые веса модели в папке, указанной в configs/config.yaml (model/weights.npy)
+Сохранённые веса модели в папке, указанной в configs/config.yaml (model/weights.npz)
 
-Графики обучения и валидации (graphics/training_metrics.png)
+Графики обучения и валидации (graphics/)
 
-Подробный лог обучения (training.log)
+## Результаты
+
+![][graphics/training_validation_metrics.png]
+
+
+
 
 

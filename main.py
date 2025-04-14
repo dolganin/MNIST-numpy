@@ -40,8 +40,7 @@ def main():
     train_transforms = Compose([
         ToFloat(),
         Normalize(mean=0.1307, std=0.3081),
-        RandomHorizontalFlip(prob=0.5),
-        RandomRotation(angles=[0, 90, 180, 270]),
+        RandomHorizontalFlip(prob=0.1),
         AddGaussianNoise(mean=0.0, std=0.05),
     ])
     test_transforms = Compose([

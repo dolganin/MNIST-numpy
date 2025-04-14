@@ -76,39 +76,40 @@ def setup_logging():
                         format='%(asctime)s - %(levelname)s - %(message)s')
 
 
-def plot_metrics(train_metrics, test_metrics, output_dir):
-    train_losses, train_accuracies, train_precisions, train_recalls = train_metrics
-    test_losses, test_accuracies, test_precisions, test_recalls = test_metrics
+def plot_metrics(train_metrics, val_metrics, output_dir):
+    train_losses, train_accuracies, *_ = train_metrics
+    val_losses, val_accuracies, *_ = val_metrics
 
-    epochs = range(1, len(train_losses) + 1)
+    steps_train = range(1, len(train_losses) + 1)
+    steps_val = range(1, len(val_losses) + 1)
 
     plt.figure(figsize=(14, 6))
 
+    # === LOSS ===
     plt.subplot(1, 2, 1)
-    plt.plot(epochs, train_losses, label='Train Loss')
-    plt.plot(epochs, test_losses, label='Test Loss')
-    plt.xlabel('Epoch')
+    plt.plot(steps_train, train_losses, label='Train Loss', color='blue')
+    plt.plot(steps_val, val_losses, label='Validation Loss', color='orange')
+    plt.xlabel('Batch Step')
     plt.ylabel('Loss')
-    plt.title('Loss per Epoch')
+    plt.title('Loss per Batch')
     plt.legend()
 
+    # === ACCURACY ===
     plt.subplot(1, 2, 2)
-    plt.plot(epochs, train_accuracies, label='Train Accuracy')
-    plt.plot(epochs, test_accuracies, label='Test Accuracy')
-    plt.plot(epochs, train_precisions, label='Train Precision')
-    plt.plot(epochs, test_precisions, label='Test Precision')
-    plt.plot(epochs, train_recalls, label='Train Recall')
-    plt.plot(epochs, test_recalls, label='Test Recall')
-    plt.xlabel('Epoch')
-    plt.ylabel('Metrics (%)')
-    plt.title('Metrics per Epoch')
+    plt.plot(steps_train, train_accuracies, label='Train Accuracy', color='green')
+    plt.plot(steps_val, val_accuracies, label='Validation Accuracy', color='red')
+    plt.xlabel('Batch Step')
+    plt.ylabel('Accuracy (%)')
+    plt.title('Accuracy per Batch')
     plt.legend()
 
     plt.tight_layout()
 
     os.makedirs(output_dir, exist_ok=True)
-    output_path = os.path.join(output_dir, "training_metrics.png")
+    output_path = os.path.join(output_dir, "training_validation_metrics.png")
     plt.savefig(output_path)
-    print(f"График сохранён в: {output_path}")
+    print(f"Graph saved to: {output_path}")
 
     plt.show()
+
+
